@@ -1,0 +1,24 @@
+# Core dependencies
+flask
+werkzeug
+
+# Document processing
+pymupdf
+pillow
+pytesseract
+pandas
+openpyxl
+
+# LLM and orchestration
+langchain
+langchain-openai
+langchain-core
+langgraph
+openai
+
+# Optional: For email processing
+python-magic
+python-docx
+email-validator
+
+metaflow
