@@ -195,3 +195,12 @@ cython_debug/
 
 data/ 
 notebooks/data/
+
+
+# Bytecode and cache
+
+*.pyc
+
+# Metaflow cache
+.metaflow/
+metaflow_card_cache/
