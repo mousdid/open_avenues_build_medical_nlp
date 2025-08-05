@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./secrets:/app/secrets:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp_key.json
+      - HF_TOKEN_FILE=/app/secrets/hugging_face_token.txt
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+
+  extractor:
+    build: ./src
