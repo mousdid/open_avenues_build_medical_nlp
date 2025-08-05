@@ -1,0 +1,41 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.1
+pandas>=2.0.1
+google-cloud-storage>=2.9.0
+torch>=1.13.0
+transformers>=4.30.0
+numpy>=1.25.0
+python-multipart>=0.0.5
+
+# Core ML & NLP
+torch>=1.13.0
+transformers>=4.30.0
+datasets>=2.13.1
+seqeval>=1.2.2
+scikit-learn>=1.2.2
+tabulate>=0.9.0
+
+# Metaflow
+metaflow>=2.16.4
+
+# Data processing
+pandas>=2.0.1
+numpy>=1.25.0
+
+# Visualization
+matplotlib>=3.7.1
+seaborn>=0.12.2
+wordcloud>=1.8.2.2
+
+# NLP utilities
+nltk>=3.8.1
+
+# Other utils
+tqdm>=4.65.0
+
+# Optional - for API serving if used
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.1
+
+# Google Cloud Storage client (if used in utils)
+google-cloud-storage>=2.9.0
