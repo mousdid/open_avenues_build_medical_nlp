@@ -6,6 +6,7 @@ torch>=1.13.0
 transformers>=4.30.0
 numpy>=1.25.0
 python-multipart>=0.0.5
+google
 
 # Core ML & NLP
 torch>=1.13.0
@@ -34,7 +35,6 @@ nltk>=3.8.1
 tqdm>=4.65.0
 
 # Optional - for API serving if used
-fastapi>=0.100.0
 uvicorn[standard]>=0.23.1
 
 # Google Cloud Storage client (if used in utils)

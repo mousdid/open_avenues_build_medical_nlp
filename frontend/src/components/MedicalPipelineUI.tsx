@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 
-export default function MedicalPipelineUI() {
-  const [singleText, setSingleText] = useState('');
+type MedicalPipelineUIProps = {
+  onSuccess?: (results: any[], inputTexts: string[]) => void;
+};
+
+export default function MedicalPipelineUI({ onSuccess }: MedicalPipelineUIProps) {
+  const [singleText, setSingleText] = useState<string>('');
   const [batchFile, setBatchFile] = useState<File | null>(null);
   const [result, setResult] = useState<any>(null);
-  const [loadingSingle, setLoadingSingle] = useState(false);
-  const [loadingBatch, setLoadingBatch] = useState(false);
+  const [loadingSingle, setLoadingSingle] = useState<boolean>(false);
+  const [loadingBatch, setLoadingBatch] = useState<boolean>(false);
 
   // Run single text extraction
   const runSingleExtraction = async () => {
@@ -23,6 +27,11 @@ export default function MedicalPipelineUI() {
 
     const data = await res.json();
     setResult(data);
+
+    if (onSuccess && data.result) {
+      // Adjust as needed based on actual API response structure
+      onSuccess(data.result, [singleText]);
+    }
     setLoadingSingle(false);
   };
 
@@ -42,7 +51,16 @@ export default function MedicalPipelineUI() {
 
     const data = await res.json();
     setResult(data);
+
+    if (onSuccess && data.result) {
+      // Example: assuming data.result is an array and you have the original texts too
+      onSuccess(data.result, []); // You may want to pass the batch texts here if available
+    }
     setLoadingBatch(false);
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setBatchFile(e.target.files?.[0] || null);
   };
 
   return (
@@ -76,7 +94,7 @@ export default function MedicalPipelineUI() {
         <input
           type="file"
           accept=".csv"
-          onChange={(e) => setBatchFile(e.target.files?.[0] || null)}
+          onChange={handleFileChange}
           className="border rounded p-2 w-full"
         />
         <button

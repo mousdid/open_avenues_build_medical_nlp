@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import MedicalPipelineUI from '@/components/MedicalPipelineUI';
-import ExtractionResults from '@/components/ExtractionResults';
+import ExtractionResults, { ExtractionResult } from '@/components/ExtractionResults';
 
 export default function MedicalApp() {
-  const [results, setResults] = useState(null);
+  const [results, setResults] = useState<ExtractionResult[] | null>(null);
   const [originalTexts, setOriginalTexts] = useState<string[]>([]);
 
   // This will be called by MedicalPipelineUI after successful extraction
   // We'll pass in results from API and the original input texts for display
-  const handleSuccess = (extractionResults: any[], inputTexts: string[]) => {
+  const handleSuccess = (extractionResults: ExtractionResult[], inputTexts: string[]) => {
     setResults(extractionResults);
     setOriginalTexts(inputTexts);
   };

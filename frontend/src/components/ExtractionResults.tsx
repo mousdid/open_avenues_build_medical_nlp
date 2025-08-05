@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-type ExtractionResult = {
+export type ExtractionResult = {
   ExamName: string;
   findings: string;
   impression: string;
@@ -12,7 +12,7 @@ type ExtractionResult = {
 };
 
 type ResultsProps = {
-  results: ExtractionResult[]; // Array for batch or single item array
+  results: ExtractionResult[];
   onBack: () => void;
 };
 
@@ -21,7 +21,7 @@ export default function ExtractionResults({ results, onBack }: ResultsProps) {
     <div className="max-w-4xl mx-auto p-6 relative">
       <button
         onClick={onBack}
-        className="absolute top-6 right-6 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+        className="absolute top-6 right-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
       >
         ← Back
       </button>
@@ -40,11 +40,11 @@ export default function ExtractionResults({ results, onBack }: ResultsProps) {
               Report {results.length > 1 ? i + 1 : ""}
             </h2>
 
-            <div className="mb-4 p-2 bg-gray-100 rounded whitespace-pre-wrap font-mono text-sm">
-              <strong>Original Text:</strong>
-              <br />
-              {res.initialText}
-            </div>
+            <div className="mb-6 p-4 bg-gray-50 border border-gray-300 rounded-lg whitespace-pre-wrap font-mono text-sm text-gray-800 shadow-sm">
+  <strong className="block mb-2 text-lg font-semibold text-gray-700">Original Text:</strong>
+  {res.initialText}
+</div>
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
