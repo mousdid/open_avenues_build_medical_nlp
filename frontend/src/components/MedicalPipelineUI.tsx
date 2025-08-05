@@ -3,13 +3,22 @@
 import { useState, ChangeEvent } from 'react';
 
 type MedicalPipelineUIProps = {
-  onSuccess?: (results: any[], inputTexts: string[]) => void;
+  onSuccess?: (results: ExtractionResult[], inputTexts: string[]) => void;
 };
+
+interface ExtractionResult {
+  ExamName: string;
+  findings: string;
+  impression: string;
+  clinicaldata: string;
+  confidence: number;
+  initialText: string;
+}
 
 export default function MedicalPipelineUI({ onSuccess }: MedicalPipelineUIProps) {
   const [singleText, setSingleText] = useState<string>('');
   const [batchFile, setBatchFile] = useState<File | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ExtractionResult[]>([]);
   const [loadingSingle, setLoadingSingle] = useState<boolean>(false);
   const [loadingBatch, setLoadingBatch] = useState<boolean>(false);
 
