@@ -130,8 +130,10 @@ celerybeat.pid
 # Environments
 .env
 .venv
+
 env/
 venv/
+my_test_env/
 ENV/
 env.bak/
 venv.bak/
@@ -204,3 +206,7 @@ notebooks/data/
 # Metaflow cache
 .metaflow/
 metaflow_card_cache/
+ner_model/
+*.csv
+backend/data/
+secrets/
