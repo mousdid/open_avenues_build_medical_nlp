@@ -1,4 +1,3 @@
-
 {
   "name": "frontend",
   "version": "0.1.0",
@@ -25,7 +24,10 @@
     "eslint-config-next": "15.4.5",
     "@eslint/eslintrc": "^3"
   },
-  "rules": {
-  "@typescript-eslint/no-explicit-any": "off"
-}
+  "eslintConfig": {
+    "extends": ["next", "next/core-web-vitals"],
+    "rules": {
+      "@typescript-eslint/no-explicit-any": "off"
+    }
+  }
 }
