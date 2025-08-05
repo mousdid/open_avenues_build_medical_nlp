@@ -1,65 +1,102 @@
-import os
-import json
-import glob
-import random
-import torch
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer, AutoModelForTokenClassification, TrainingArguments, Trainer, DataCollatorForTokenClassification
-from datasets import Dataset, DatasetDict, ClassLabel
-from seqeval.metrics import classification_report
 import re
+import pandas as pd
+from datasets import Dataset, DatasetDict
+from transformers import (
+    AutoTokenizer,
+    AutoModelForTokenClassification,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForTokenClassification
+)
+from sklearn.model_selection import train_test_split
+from seqeval.metrics import classification_report
 
-def run_finetuning(df):
-    """
-    Fine-tunes a token classification model on the provided DataFrame and returns test predictions and a classification report.
-    Args:
-        df (pd.DataFrame): DataFrame with columns 'ReportText', 'findings', 'impression', 'clinicaldata', 'ExamName'
-    Returns:
-        dict: {'true_labels': true_labels, 'true_preds': true_preds, 'report': report_str}
-    """
 
+LABEL_COLS = ("findings", "clinicaldata", "ExamName", "impression")
 
-    def clean_text(text):
-        if not isinstance(text, str):
-            return ""
-        text = text.replace("\n", " ")
-        text = re.sub(r"\s+", " ", text)
-        return text
+def extract_sections(row, text_col="ReportText", label_cols=LABEL_COLS, sep="\n\n"):
+    out = {}
+    out[text_col] = row[text_col]
+    for col in label_cols:
+        raw = row.get(col, "") or ""
+        parts = [blk.strip() for blk in raw.split(sep) if blk.strip()]
+        out[col] = parts
+    return out
 
-    def tag_tokens(row):
-        text = clean_text(row["ReportText"])
-        tokens = text.split()
-        tags = ["O"] * len(tokens)
-        label_spans = []
-        for label_name in ["findings", "impression", "clinicaldata", "ExamName"]:
-            span = clean_text(row.get(label_name, ""))
-            span_tokens = span.split()
-            if span_tokens:
-                label_spans.append((span_tokens, label_name))
-        i = 0
-        while i < len(tokens):
-            matched = False
-            for span_tokens, label in label_spans:
-                n = len(span_tokens)
-                if tokens[i:i+n] == span_tokens:
-                    if n == 1:
-                        tags[i] = f"S-{label}"
-                    else:
-                        tags[i] = f"B-{label}"
-                        for j in range(1, n - 1):
-                            tags[i+j] = f"I-{label}"
-                        tags[i+n-1] = f"E-{label}"
-                    i += n
-                    matched = True
-                    break
-            if not matched:
-                i += 1
-        return tags
+def chunk_labels_for_row(report_tokens, sections, label_cols=LABEL_COLS):
+    N = len(report_tokens)
+    chunk_labels = [None] * N
+    used = set()
 
-    df = df.copy()
-    df["labels"] = df.apply(tag_tokens, axis=1)
-    train_df, temp_df = train_test_split(df, test_size=0.2, random_state=42)
+    for sec in label_cols:
+        # Sort blocks by length descending to match longer chunks first
+        for block in sorted(sections[sec], key=lambda b: -len(b.split())):
+            blk_toks = block.split()
+            L = len(blk_toks)
+            if L == 0:
+                continue
+            for i in range(0, N - L + 1):
+                if any((i + k) in used for k in range(L)):
+                    continue
+                if report_tokens[i:i + L] == blk_toks:
+                    for k in range(L):
+                        chunk_labels[i + k] = sec
+                    used.update(range(i, i + L))
+    return chunk_labels
+
+def bioes_from_chunks(chunk_labels):
+    N = len(chunk_labels)
+    tags = ["O"] * N
+    i = 0
+    while i < N:
+        sec = chunk_labels[i]
+        if sec is None:
+            tags[i] = "O"
+            i += 1
+        else:
+            j = i + 1
+            while j < N and chunk_labels[j] == sec:
+                j += 1
+            length = j - i
+            if length == 1:
+                tags[i] = f"S-{sec}"
+            elif length == 2:
+                tags[i] = f"B-{sec}"
+                tags[i + 1] = f"E-{sec}"
+            else:
+                tags[i] = f"B-{sec}"
+                for k in range(i + 1, j - 1):
+                    tags[k] = f"I-{sec}"
+                tags[j - 1] = f"E-{sec}"
+            i = j
+    return tags
+
+def run_finetuning(df: pd.DataFrame, model_name="emilyalsentzer/Bio_ClinicalBERT"):
+    # 1) Extract sections
+    df["sections"] = df.apply(extract_sections, axis=1)
+
+    # 2) Tokenize full report
+    df["tokens"] = df["sections"].apply(lambda s: s["ReportText"].split())
+
+    # 3) Chunk tokens to section labels
+    df["chunk_labels"] = df.apply(
+        lambda row: chunk_labels_for_row(
+            report_tokens=row["tokens"],
+            sections=row["sections"],
+            label_cols=LABEL_COLS
+        ),
+        axis=1
+    )
+
+    # 4) Convert chunks to BIOES tags
+    df["labels"] = df["chunk_labels"].apply(bioes_from_chunks)
+
+    # 5) Remove rows containing "O" tags (optional: keep only fully labeled data)
+    mask = df["labels"].apply(lambda tags: "O" in tags)
+    df_clean = df[~mask].reset_index(drop=True)
+
+    # 6) Train/validation/test split
+    train_df, temp_df = train_test_split(df_clean, test_size=0.2, random_state=42)
     val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
 
     dataset_dict = DatasetDict({
@@ -68,27 +105,38 @@ def run_finetuning(df):
         "test": Dataset.from_pandas(test_df)
     })
 
-    model_name = "emilyalsentzer/Bio_ClinicalBERT"
+    # 7) Tokenizer and label map
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.model_max_length = 512
 
-    label_list = sorted({label for row in df["labels"] for label in row})
+    label_list = sorted({lab for row in df["labels"] for lab in row})
     label2id = {l: i for i, l in enumerate(label_list)}
     id2label = {i: l for l, i in label2id.items()}
 
+    # 8) Tokenize and align labels for each example
     def tokenize_and_align(examples):
-        tokenized = tokenizer(examples["ReportText"].split(), truncation=True, is_split_into_words=True)
-        labels = []
+        tokenized = tokenizer(
+            examples["tokens"],
+            is_split_into_words=True,
+            truncation=True,
+        )
         word_ids = tokenized.word_ids()
-        for word_id in word_ids:
-            if word_id is None:
+        labels = []
+        for wid in word_ids:
+            if wid is None:
                 labels.append(-100)
             else:
-                labels.append(label2id[examples["labels"][word_id]])
+                labels.append(label2id[examples["labels"][wid]])
         tokenized["labels"] = labels
         return tokenized
 
-    tokenized_datasets = dataset_dict.map(tokenize_and_align)
+    tokenized_datasets = dataset_dict.map(
+        tokenize_and_align,
+        batched=False,
+        remove_columns=dataset_dict["train"].column_names
+    )
 
+    # 9) Load model
     model = AutoModelForTokenClassification.from_pretrained(
         model_name,
         num_labels=len(label_list),
@@ -96,8 +144,10 @@ def run_finetuning(df):
         label2id=label2id
     )
 
-    args = TrainingArguments(
+    # 10) Training arguments and trainer setup
+    training_args = TrainingArguments(
         output_dir="ner_model",
+        evaluation_strategy="epoch",
         save_strategy="epoch",
         learning_rate=2e-5,
         per_device_train_batch_size=8,
@@ -113,21 +163,34 @@ def run_finetuning(df):
 
     trainer = Trainer(
         model=model,
-        args=args,
+        args=training_args,
         train_dataset=tokenized_datasets["train"],
         eval_dataset=tokenized_datasets["validation"],
         tokenizer=tokenizer,
         data_collator=data_collator
     )
 
+    # 11) Train model
     trainer.train()
 
+    # 12) Evaluate on test set
     predictions, labels, _ = trainer.predict(tokenized_datasets["test"])
-    preds = predictions.argmax(-1)
-    true_labels = [[id2label[label] for label in example if label != -100] for example in labels]
-    true_preds = [[id2label[pred] for pred, lab in zip(pred_row, label_row) if lab != -100] for pred_row, label_row in zip(preds, labels)]
-    report_str = classification_report(true_labels, true_preds)
+    preds = predictions.argmax(axis=-1)
 
-    return {'true_labels': true_labels, 'true_preds': true_preds, 'report': report_str}
+    true_labels = [
+        [id2label[label_id] for label_id in label_row if label_id != -100]
+        for label_row in labels
+    ]
+    true_preds = [
+        [id2label[pred_id] for pred_id, label_id in zip(pred_row, label_row) if label_id != -100]
+        for pred_row, label_row in zip(preds, labels)
+    ]
 
+    # 13) Classification report
+    report_str = classification_report(true_labels, true_preds, digits=4)
 
+    return {
+        "true_labels": true_labels,
+        "true_preds": true_preds,
+        "report": report_str
+    }
