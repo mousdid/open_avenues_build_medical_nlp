@@ -16,7 +16,8 @@ app.add_middleware(
 )
 
 BUCKET_NAME = "medical-reports-project-build-open-avenues"
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../secrets/gcp_key.json"
+
+gcp_key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 client = storage.Client()
 bucket = client.bucket(BUCKET_NAME)

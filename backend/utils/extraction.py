@@ -9,7 +9,7 @@ def run_extraction(cleaned_batch):
     """
 
     # Load Hugging Face token and model repo name
-    hf_token_path = "../secrets/hugging_face.txt"
+    hf_token_path = os.getenv("HF_TOKEN_FILE")
     with open(hf_token_path, "r") as f:
         hf_token = f.read().strip()
 
