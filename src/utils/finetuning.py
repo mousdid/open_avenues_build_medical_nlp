@@ -147,7 +147,6 @@ def run_finetuning(df: pd.DataFrame, model_name="emilyalsentzer/Bio_ClinicalBERT
     # 10) Training arguments and trainer setup
     training_args = TrainingArguments(
         output_dir="ner_model",
-        evaluation_strategy="epoch",
         save_strategy="epoch",
         learning_rate=2e-5,
         per_device_train_batch_size=8,
@@ -194,3 +193,4 @@ def run_finetuning(df: pd.DataFrame, model_name="emilyalsentzer/Bio_ClinicalBERT
         "true_preds": true_preds,
         "report": report_str
     }
+

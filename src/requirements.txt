@@ -30,3 +30,9 @@ uvicorn[standard]>=0.23.1
 
 # Google Cloud Storage client (if used in utils)
 google-cloud-storage>=2.9.0
+
+
+jinja2>=3.1.0
+accelerate>=0.26.0
+
+
