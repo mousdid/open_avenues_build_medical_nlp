@@ -123,7 +123,8 @@ class ReportsFlow(FlowSpec):
         self.prompt_output = inputs.prompt_extraction.prompt_output
         self.finetune_output = inputs.finetune_extraction.finetune_output
         self.next(self.result_analysis)
-
+        
+    @card
     @step
     def result_analysis(self):
         print("Analyzing results...")
